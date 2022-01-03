@@ -102,7 +102,7 @@ def main(args):
     source_image_hd.save(target_hd)
     print("saved to", target_hd)
 
-    source_image_mini = scale_image(source_image_hd, 500, 200)
+    source_image_mini = scale_image(source_image_hd, 300, 333)
     target_mini = build_target(filepath, "polaroid-mini")
     source_image_mini.save(target_mini)
     print("saved to", target_mini)
