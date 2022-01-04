@@ -20,6 +20,8 @@ COLOR_FRAME = (255, 255, 255)
 COLOR_BORDER = (0, 0, 0)
 
 
+# TODO : keep ratio between width and height
+# oou alors, remplit limage initial avec du noir pour toujours avoir un certain ratio facile ?
 def scale_image(image, width, height):
     """scale down"""
     if image.size[0] > width:
@@ -28,15 +30,15 @@ def scale_image(image, width, height):
     return image.resize((width, height), Image.BICUBIC)
 
 
-def crop_image(image):
+def crop_image(image, divide_by=2):
     """
     return a new Image instance
     """
     if image.size[0] > image.size[1]:
-        delta = (image.size[0] - image.size[1]) / 2
+        delta = (image.size[0] - image.size[1]) / divide_by
         box = (delta, 0, image.size[0] - delta, image.size[1])
-    elif image.size[1] > image.size[0]:
-        delta = (image.size[1] - image.size[0]) / 2
+    else:
+        delta = (image.size[1] - image.size[0]) / divide_by
         box = (0, delta, image.size[0], image.size[1] - delta)
 
     image = image.crop(box)
@@ -95,7 +97,9 @@ def main(args):
     source_image = Image.open(filepath)
     source_image.load()
 
-    source_image = scale_image(crop_image(source_image), IMAGE_SIZE, IMAGE_SIZE)
+    source_image = scale_image(
+        crop_image(source_image, divide_by=1.2), IMAGE_SIZE, IMAGE_SIZE
+    )
     source_image_hd = add_frame(source_image)
 
     target_hd = build_target(filepath, "polaroid-hd")
