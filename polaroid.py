@@ -152,7 +152,7 @@ def main(args):
         logger.info("saved HD to %s", hd_path)
     else:
         logger.warning(
-            "L'image %s : %s est trop petite pour le format hd : %s X %s",
+            "%s : %s is too small to have a polaroid of : %s X %s",
             filepath,
             source_image.size,
             HD_WIDTH,
@@ -164,8 +164,8 @@ def main(args):
         mini_path = save_to(mini_image, filepath, "polaroid-mini")
         logger.info("saved mini to %s", mini_path)
     else:
-        logger.error(
-            "L'image %s : %s est trop petite pour le format hd : %s X %s",
+        logger.warning(
+            "%s : %s is too small to have a polaroid of : %s X %s",
             filepath,
             source_image.size,
             MINI_WIDTH,
