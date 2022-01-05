@@ -39,16 +39,16 @@ def setup_logger():
     logger.addHandler(console)
 
 
-def crop_image(image, divide_by=2):
+def crop_image(image):
     """
     crop at the center
     return a new Image instance
     """
     if image.size[0] > image.size[1]:
-        delta = (image.size[0] - image.size[1]) / divide_by
+        delta = (image.size[0] - image.size[1]) / 2
         box = (delta, 0, image.size[0] - delta, image.size[1])
     else:
-        delta = (image.size[1] - image.size[0]) / divide_by
+        delta = (image.size[1] - image.size[0]) / 2
         box = (0, delta, image.size[0], image.size[1] - delta)
 
     return image.crop(box)
@@ -144,7 +144,6 @@ def main(args):
     """
     filepath = args[0]
     source_image = Image.open(filepath)
-    source_image.load()
 
     if can_create_hd_polaroid(source_image):
         hd_image = create_hd_polaroid(source_image)
