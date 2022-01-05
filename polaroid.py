@@ -20,31 +20,26 @@ BORDER_SIZE = 3
 COLOR_FRAME = (255, 255, 255)
 COLOR_BORDER = (0, 0, 0)
 
+HD_WIDTH = 760
+HD_HEIGHT = 1000
+
 logger = logging.getLogger()
 
 
 def setup_logger():
-    """."""
     formatter = logging.Formatter("%(asctime)s %(levelname)-8s %(message)s")
 
     console = logging.StreamHandler()
-    console.setLevel(logging.DEBUG)
+    console.setLevel(logging.INFO)
     console.setFormatter(formatter)
 
     logger.setLevel(logging.DEBUG)
     logger.addHandler(console)
 
 
-def scale_image(image, width, height):
-    """scale down"""
-    if image.size[0] > width:
-        return image.resize((width, height), Image.ANTIALIAS)
-
-    return image.resize((width, height), Image.BICUBIC)
-
-
 def crop_image(image, divide_by=2):
     """
+    crop at the center
     return a new Image instance
     """
     if image.size[0] > image.size[1]:
@@ -54,14 +49,11 @@ def crop_image(image, divide_by=2):
         delta = (image.size[1] - image.size[0]) / divide_by
         box = (0, delta, image.size[0], image.size[1] - delta)
 
-    image = image.crop(box)
-    image.load()
-    return image
+    return image.crop(box)
 
 
 def add_frame(image):
-    """Adds the frame around the image"""
-    # Create the frame
+    """Adds the polaroid frame around the image"""
     frame = Image.new(
         "RGB",
         (IMAGE_SIZE + IMAGE_LEFT + IMAGE_RIGHT, IMAGE_SIZE + IMAGE_TOP + IMAGE_BOTTOM),
@@ -88,18 +80,48 @@ def add_frame(image):
         ),
         fill=COLOR_BORDER,
     )
+
     # Add the source image
     frame.paste(image, (IMAGE_LEFT, IMAGE_TOP))
-    # All done
+
     return frame
 
 
 def build_target(filepath, folder):
     """
-    return a new folder
+    return a new folder path
     """
     name, _ = path.splitext(path.basename(filepath))
     return path.join(path.dirname(path.realpath(__file__)), folder, name + ".jpg")
+
+
+def can_create_hd_polaroid(image):
+    width, height = image.size
+    return width >= HD_WIDTH and height > HD_HEIGHT
+
+
+def create_hd_polaroid(image):
+    width, height = image.size
+
+    # rescale but force one side.
+    # if in landscape -> keep height
+    # if in portrait  -> keep width
+    if width > height:
+        resized_height = HD_HEIGHT
+        resized_width = int(round((HD_HEIGHT / float(height)) * width))
+    else:
+        resized_width = HD_WIDTH
+        resized_height = int(round((HD_WIDTH / float(width)) * height))
+
+    return image.resize(
+        (resized_width, resized_height), resample=Image.LANCZOS, reducing_gap=3
+    )
+
+
+def save_to(image, original_filepath):
+    target_hd = build_target(original_filepath, "polaroid-hd")
+    image.save(target_hd)
+    return target_hd
 
 
 def main(args):
@@ -110,19 +132,18 @@ def main(args):
     source_image = Image.open(filepath)
     source_image.load()
 
-    source_image = scale_image(
-        crop_image(source_image, divide_by=1.2), IMAGE_SIZE, IMAGE_SIZE
-    )
-    source_image_hd = add_frame(source_image)
-
-    target_hd = build_target(filepath, "polaroid-hd")
-    source_image_hd.save(target_hd)
-    logger.info("saved to %s", target_hd)
-
-    source_image_mini = scale_image(source_image_hd, 300, 333)
-    target_mini = build_target(filepath, "polaroid-mini")
-    source_image_mini.save(target_mini)
-    logger.info("saved to %s", target_mini)
+    if can_create_hd_polaroid(source_image):
+        hd_image = create_hd_polaroid(source_image)
+        hd_path = save_to(hd_image, filepath)
+        logger.info("saved HD to %s", hd_path)
+    else:
+        logger.warning(
+            "L'image %s : %s est trop petite pour le format hd : %s X %s",
+            filepath,
+            source_image.size,
+            HD_WIDTH,
+            HD_HEIGHT,
+        )
 
 
 if __name__ == "__main__":
