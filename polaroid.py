@@ -100,22 +100,29 @@ def can_create_hd_polaroid(image):
     return width >= HD_WIDTH and height > HD_HEIGHT
 
 
-def create_hd_polaroid(image):
+def rescale_keep_one_side(image, keep_width, keep_height):
+    """
+    rescale but force one side.
+    if in landscape -> keep height
+    if in portrait  -> keep width
+    """
     width, height = image.size
 
-    # rescale but force one side.
-    # if in landscape -> keep height
-    # if in portrait  -> keep width
     if width > height:
-        resized_height = HD_HEIGHT
-        resized_width = int(round((HD_HEIGHT / float(height)) * width))
+        resized_height = keep_height
+        resized_width = int(round((keep_height / float(height)) * width))
     else:
-        resized_width = HD_WIDTH
-        resized_height = int(round((HD_WIDTH / float(width)) * height))
+        resized_width = keep_width
+        resized_height = int(round((keep_width / float(width)) * height))
 
     return image.resize(
         (resized_width, resized_height), resample=Image.LANCZOS, reducing_gap=3
     )
+
+
+def create_hd_polaroid(image):
+    scaled_image = rescale_keep_one_side(image, HD_WIDTH, HD_HEIGHT)
+    return scaled_image
 
 
 def save_to(image, original_filepath):
