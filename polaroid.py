@@ -4,6 +4,7 @@ Thanks to https://raw.githubusercontent.com/thegaragelab/pythonutils/master/pola
 """
 
 import sys
+import logging
 from os import path
 from PIL import Image, ImageDraw
 
@@ -19,9 +20,21 @@ BORDER_SIZE = 3
 COLOR_FRAME = (255, 255, 255)
 COLOR_BORDER = (0, 0, 0)
 
+logger = logging.getLogger()
 
-# TODO : keep ratio between width and height
-# oou alors, remplit limage initial avec du noir pour toujours avoir un certain ratio facile ?
+
+def setup_logger():
+    """."""
+    formatter = logging.Formatter("%(asctime)s %(levelname)-8s %(message)s")
+
+    console = logging.StreamHandler()
+    console.setLevel(logging.DEBUG)
+    console.setFormatter(formatter)
+
+    logger.setLevel(logging.DEBUG)
+    logger.addHandler(console)
+
+
 def scale_image(image, width, height):
     """scale down"""
     if image.size[0] > width:
@@ -104,13 +117,14 @@ def main(args):
 
     target_hd = build_target(filepath, "polaroid-hd")
     source_image_hd.save(target_hd)
-    print("saved to", target_hd)
+    logger.info("saved to %s", target_hd)
 
     source_image_mini = scale_image(source_image_hd, 300, 333)
     target_mini = build_target(filepath, "polaroid-mini")
     source_image_mini.save(target_mini)
-    print("saved to", target_mini)
+    logger.info("saved to %s", target_mini)
 
 
 if __name__ == "__main__":
+    setup_logger()
     main(sys.argv[1:])
