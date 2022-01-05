@@ -22,6 +22,8 @@ COLOR_BORDER = (0, 0, 0)
 
 HD_WIDTH = 760
 HD_HEIGHT = 1000
+MINI_WIDTH = int(HD_WIDTH / 2)
+MINI_HEIGHT = int(HD_HEIGHT / 2)
 
 logger = logging.getLogger()
 
@@ -95,6 +97,11 @@ def build_target(filepath, folder):
     return path.join(path.dirname(path.realpath(__file__)), folder, name + ".jpg")
 
 
+def can_create_mini_polaroid(image):
+    width, height = image.size
+    return width >= MINI_WIDTH and height > MINI_HEIGHT
+
+
 def can_create_hd_polaroid(image):
     width, height = image.size
     return width >= HD_WIDTH and height > HD_HEIGHT
@@ -125,8 +132,8 @@ def create_hd_polaroid(image):
     return scaled_image
 
 
-def save_to(image, original_filepath):
-    target_hd = build_target(original_filepath, "polaroid-hd")
+def save_to(image, original_filepath, folder):
+    target_hd = build_target(original_filepath, folder)
     image.save(target_hd)
     return target_hd
 
@@ -141,7 +148,7 @@ def main(args):
 
     if can_create_hd_polaroid(source_image):
         hd_image = create_hd_polaroid(source_image)
-        hd_path = save_to(hd_image, filepath)
+        hd_path = save_to(hd_image, filepath, "polaroid-hd")
         logger.info("saved HD to %s", hd_path)
     else:
         logger.warning(
@@ -150,6 +157,19 @@ def main(args):
             source_image.size,
             HD_WIDTH,
             HD_HEIGHT,
+        )
+
+    if can_create_mini_polaroid(source_image):
+        mini_image = rescale_keep_one_side(source_image, MINI_WIDTH, MINI_HEIGHT)
+        mini_path = save_to(mini_image, filepath, "polaroid-mini")
+        logger.info("saved mini to %s", mini_path)
+    else:
+        logger.error(
+            "L'image %s : %s est trop petite pour le format hd : %s X %s",
+            filepath,
+            source_image.size,
+            MINI_WIDTH,
+            MINI_HEIGHT,
         )
 
 
