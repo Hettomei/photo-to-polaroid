@@ -6,13 +6,19 @@ Thanks to https://raw.githubusercontent.com/thegaragelab/pythonutils/master/pola
 import sys
 import logging
 from os import path
+
 from PIL import Image, ImageDraw
 
-# Image size constraints
-IMAGE_TOP = 140
-IMAGE_BOTTOM = 280
+# Real kodak mini proportion
+# IMAGE_TOP = 140
+# IMAGE_BOTTOM = 280
+# IMAGE_LEFT = 70
+# IMAGE_RIGHT = IMAGE_LEFT
+
+IMAGE_TOP = 100
+IMAGE_BOTTOM = 200
 IMAGE_LEFT = 70
-IMAGE_RIGHT = 70
+IMAGE_RIGHT = IMAGE_LEFT
 
 BORDER_SIZE = 1
 
@@ -71,20 +77,11 @@ def add_frame(image):
         (
             BORDER_SIZE,
             BORDER_SIZE,
-            frame.size[0] - BORDER_SIZE,
-            frame.size[1] - BORDER_SIZE,
+            frame.size[0] - BORDER_SIZE * 2,
+            frame.size[1] - BORDER_SIZE * 2,
         ),
         fill=COLOR_FRAME,
     )
-    # draw.rectangle(
-    #     (
-    #         IMAGE_LEFT - BORDER_SIZE,
-    #         IMAGE_TOP - BORDER_SIZE,
-    #         IMAGE_LEFT + HD_WIDTH + BORDER_SIZE,
-    #         IMAGE_TOP + HD_HEIGHT + BORDER_SIZE,
-    #     ),
-    #     fill=COLOR_BORDER,
-    # )
 
     # Add the source image
     frame.paste(image, (IMAGE_LEFT, IMAGE_TOP))
