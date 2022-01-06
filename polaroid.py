@@ -9,13 +9,12 @@ from os import path
 from PIL import Image, ImageDraw
 
 # Image size constraints
-IMAGE_SIZE = 800
-IMAGE_TOP = 50
-IMAGE_BOTTOM = 150
-IMAGE_LEFT = 50
-IMAGE_RIGHT = 50
+IMAGE_TOP = 140
+IMAGE_BOTTOM = 280
+IMAGE_LEFT = 70
+IMAGE_RIGHT = 70
 
-BORDER_SIZE = 3
+BORDER_SIZE = 1
 
 COLOR_FRAME = (255, 255, 255)
 COLOR_BORDER = (0, 0, 0)
@@ -59,7 +58,10 @@ def add_frame(image):
     """Adds the polaroid frame around the image"""
     frame = Image.new(
         "RGB",
-        (IMAGE_SIZE + IMAGE_LEFT + IMAGE_RIGHT, IMAGE_SIZE + IMAGE_TOP + IMAGE_BOTTOM),
+        (
+            BORDER_SIZE + IMAGE_LEFT + HD_WIDTH + IMAGE_RIGHT + BORDER_SIZE,
+            BORDER_SIZE + IMAGE_TOP + HD_HEIGHT + IMAGE_BOTTOM + BORDER_SIZE,
+        ),
         COLOR_BORDER,
     )
 
@@ -74,15 +76,15 @@ def add_frame(image):
         ),
         fill=COLOR_FRAME,
     )
-    draw.rectangle(
-        (
-            IMAGE_LEFT - BORDER_SIZE,
-            IMAGE_TOP - BORDER_SIZE,
-            IMAGE_LEFT + IMAGE_SIZE + BORDER_SIZE,
-            IMAGE_TOP + IMAGE_SIZE + BORDER_SIZE,
-        ),
-        fill=COLOR_BORDER,
-    )
+    # draw.rectangle(
+    #     (
+    #         IMAGE_LEFT - BORDER_SIZE,
+    #         IMAGE_TOP - BORDER_SIZE,
+    #         IMAGE_LEFT + HD_WIDTH + BORDER_SIZE,
+    #         IMAGE_TOP + HD_HEIGHT + BORDER_SIZE,
+    #     ),
+    #     fill=COLOR_BORDER,
+    # )
 
     # Add the source image
     frame.paste(image, (IMAGE_LEFT, IMAGE_TOP))
@@ -131,10 +133,11 @@ def rescale_keep_one_side(image, keep_width, keep_height):
 def create_hd_polaroid(image):
     scaled_image = rescale_keep_one_side(image, HD_WIDTH, HD_HEIGHT)
     croped_image = crop_center(scaled_image, HD_WIDTH, HD_HEIGHT)
+    frammed_image = add_frame(croped_image)
     logger.info("  image size is %s", image.size)
     logger.info(" scaled size is %s", scaled_image.size)
     logger.info("cropped size is %s", croped_image.size)
-    return croped_image
+    return frammed_image
 
 
 def save_to(image, original_filepath, folder):
