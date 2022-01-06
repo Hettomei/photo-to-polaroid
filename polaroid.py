@@ -39,17 +39,18 @@ def setup_logger():
     logger.addHandler(console)
 
 
-def crop_image(image):
+def crop_center(image, target_width, target_height):
     """
     crop at the center
     return a new Image instance
     """
-    if image.size[0] > image.size[1]:
-        delta = (image.size[0] - image.size[1]) / 2
-        box = (delta, 0, image.size[0] - delta, image.size[1])
+    width, height = image.size
+    if width == target_width:
+        delta = (height - target_height) / 2
+        box = (0, delta, width, height - delta)
     else:
-        delta = (image.size[1] - image.size[0]) / 2
-        box = (0, delta, image.size[0], image.size[1] - delta)
+        delta = (width - target_width) / 2
+        box = (delta, 0, width - delta, height)
 
     return image.crop(box)
 
@@ -129,7 +130,11 @@ def rescale_keep_one_side(image, keep_width, keep_height):
 
 def create_hd_polaroid(image):
     scaled_image = rescale_keep_one_side(image, HD_WIDTH, HD_HEIGHT)
-    return scaled_image
+    croped_image = crop_center(scaled_image, HD_WIDTH, HD_HEIGHT)
+    logger.info("  image size is %s", image.size)
+    logger.info(" scaled size is %s", scaled_image.size)
+    logger.info("cropped size is %s", croped_image.size)
+    return croped_image
 
 
 def save_to(image, original_filepath, folder):
