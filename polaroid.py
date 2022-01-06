@@ -10,20 +10,19 @@ from os import path
 from PIL import Image, ImageDraw
 
 # Real kodak mini proportion
-# IMAGE_TOP = 140
-# IMAGE_BOTTOM = 280
-# IMAGE_LEFT = 70
-# IMAGE_RIGHT = IMAGE_LEFT
+# POLAROID_TOP = 140
+# POLAROID_BOTTOM = 280
+# POLAROID_LEFT = 70
+# POLAROID_RIGHT = POLAROID_LEFT
 
-IMAGE_TOP = 100
-IMAGE_BOTTOM = 200
-IMAGE_LEFT = 70
-IMAGE_RIGHT = IMAGE_LEFT
+POLAROID_TOP = 100
+POLAROID_BOTTOM = 200
+POLAROID_LEFT = 70
+POLAROID_RIGHT = POLAROID_LEFT
+COLOR_FRAME = (255, 255, 255)
 
 BORDER_SIZE = 1
-
-COLOR_FRAME = (255, 255, 255)
-COLOR_BORDER = (0, 0, 0)
+BORDER_COLOR = (90, 90, 90)
 
 HD_WIDTH = 760
 HD_HEIGHT = 1000
@@ -65,10 +64,10 @@ def add_frame(image):
     frame = Image.new(
         "RGB",
         (
-            BORDER_SIZE + IMAGE_LEFT + HD_WIDTH + IMAGE_RIGHT + BORDER_SIZE,
-            BORDER_SIZE + IMAGE_TOP + HD_HEIGHT + IMAGE_BOTTOM + BORDER_SIZE,
+            BORDER_SIZE + POLAROID_LEFT + HD_WIDTH + POLAROID_RIGHT + BORDER_SIZE,
+            BORDER_SIZE + POLAROID_TOP + HD_HEIGHT + POLAROID_BOTTOM + BORDER_SIZE,
         ),
-        COLOR_BORDER,
+        BORDER_COLOR,
     )
 
     # Create outer and inner borders
@@ -84,7 +83,7 @@ def add_frame(image):
     )
 
     # Add the source image
-    frame.paste(image, (IMAGE_LEFT, IMAGE_TOP))
+    frame.paste(image, (POLAROID_LEFT, POLAROID_TOP))
 
     return frame
 
