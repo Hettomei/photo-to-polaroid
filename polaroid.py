@@ -7,6 +7,7 @@ import argparse
 import sys
 import logging
 from os import path
+import os
 from pathlib import Path
 from types import SimpleNamespace
 import tempfile
@@ -81,7 +82,9 @@ def prepare_files(options):
             )
         )
 
-    if not options.to_folder:
+    if options.to_folder:
+        os.makedirs(options.to_folder)
+    else:
         options.to_folder = tempfile.mkdtemp(prefix=f"to-polaroid-{options.size}-")
 
     return options
