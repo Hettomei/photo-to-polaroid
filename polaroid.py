@@ -3,6 +3,7 @@ convert to polaroid
 Thanks to https://raw.githubusercontent.com/thegaragelab/pythonutils/master/polaroid/polaroid.py
 """
 
+import argparse
 import sys
 import logging
 from os import path
@@ -26,6 +27,19 @@ def setup_logger():
 
     logger.setLevel(logging.DEBUG)
     logger.addHandler(console)
+
+
+def parse(sys_args):
+    parser = argparse.ArgumentParser(description="Convert photos into polaroid.")
+    parser.add_argument(
+        "--file",
+        dest="filepath",
+        action="store",
+        help="File path to convert",
+        required=True,
+    )
+
+    return parser.parse_args(sys_args)
 
 
 def crop_center(image, measures):
@@ -118,10 +132,10 @@ def create_polaroid(image, measures):
     scaled_image = rescale_keep_one_side(image, measures)
     croped_image = crop_center(scaled_image, measures)
     frammed_image = add_frame(croped_image, measures)
-    logger.info("use %s", measures)
-    logger.info("  image size is %s", image.size)
-    logger.info(" scaled size is %s", scaled_image.size)
-    logger.info("cropped size is %s", croped_image.size)
+    logger.debug("use %s", measures)
+    logger.debug("  image size is %s", image.size)
+    logger.debug(" scaled size is %s", scaled_image.size)
+    logger.debug("cropped size is %s", croped_image.size)
     return frammed_image
 
 
@@ -135,8 +149,9 @@ def main(args):
     """
     main
     """
-    filepath = args[0]
-    source_image = Image.open(filepath)
+    options = parse(args)
+    source_image = Image.open(options.filepath)
+    logger.info("Try to convert %s to polaroid", options.filepath)
 
     # other proportion
     # hd_measures = SimpleNamespace(
@@ -156,24 +171,24 @@ def main(args):
     )
     if can_create_polaroid(source_image, hd_measures):
         hd_image = create_polaroid(source_image, hd_measures)
-        hd_path = save_to(hd_image, filepath, "polaroid-hd")
+        hd_path = save_to(hd_image, options.filepath, "polaroid-hd")
         logger.info("saved HD to %s", hd_path)
     else:
         logger.warning(
             "%s : %s is too small to have a polaroid of : %s",
-            filepath,
+            options.filepath,
             source_image.size,
             hd_measures,
         )
 
     if can_create_polaroid(source_image, mini_measures):
         mini_image = create_polaroid(source_image, mini_measures)
-        mini_path = save_to(mini_image, filepath, "polaroid-mini")
+        mini_path = save_to(mini_image, options.filepath, "polaroid-mini")
         logger.info("saved mini to %s", mini_path)
     else:
         logger.warning(
             "%s : %s is too small to have a polaroid of : %s",
-            filepath,
+            options.filepath,
             source_image.size,
             mini_measures,
         )
