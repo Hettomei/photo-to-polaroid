@@ -42,7 +42,7 @@ def parse(sys_args):
     )
 
     parser.add_argument(
-        "--folder",
+        "--from",
         dest="folder",
         action="store",
         help="Folder path to convert all jpg jpeg and png",
@@ -61,7 +61,7 @@ def parse(sys_args):
         "--to",
         dest="to_folder",
         action="store",
-        help="The destination folder",
+        help="The destination folder. passing a/b/c will create ./a/b/c if does not exist. By default create a temp folder",
     )
 
     return parser.parse_args(sys_args)
@@ -188,10 +188,10 @@ def create_polaroid(image, measures):
 
 
 def save_to(image, original_filepath, folder):
-    target_hd = build_target(original_filepath, folder)
-    logger.info(target_hd)
-    image.save(target_hd)
-    return target_hd
+    target = build_target(original_filepath, folder)
+    image.save(target)
+    logger.info("saved to %s", target)
+    return target
 
 
 def convert_picture(filepath, options):
@@ -214,22 +214,19 @@ def convert_picture(filepath, options):
     )
     if can_create_polaroid(source_image, hd_measures):
         hd_image = create_polaroid(source_image, hd_measures)
-        hd_path = save_to(hd_image, filepath, options.to_folder)
-        logger.info("saved to %s", hd_path)
+        save_to(hd_image, filepath, options.to_folder)
     else:
         logger.warning(
             "%s : %s is too small to have a polaroid of : %s",
             filepath,
             source_image.size,
-            hd_measures,
+            (hd_measures.width, hd_measures.height),
         )
 
 
 def main(args):
     options = parse(args)
     options = prepare_files(options)
-
-    logger.info(options)
 
     for filepath in options.files:
         logger.info("Try to convert %s", filepath)
