@@ -9,6 +9,7 @@ import logging
 from os import path
 from pathlib import Path
 from types import SimpleNamespace
+import tempfile
 
 from PIL import Image, ImageDraw
 
@@ -46,6 +47,22 @@ def parse(sys_args):
         help="Folder path to convert all jpg jpeg and png",
     )
 
+    parser.add_argument(
+        "--size",
+        dest="size",
+        choices=["mini", "medium"],
+        action="store",
+        help="the size of the polaroid",
+        default="medium",
+    )
+
+    parser.add_argument(
+        "--to",
+        dest="to_folder",
+        action="store",
+        help="The destination folder",
+    )
+
     return parser.parse_args(sys_args)
 
 
@@ -63,6 +80,9 @@ def prepare_files(options):
                 if p.suffix.lower() in {".jpg", ".jpeg", ".png", ".webp", ".gif"}
             )
         )
+
+    if not options.to_folder:
+        options.to_folder = tempfile.mkdtemp(prefix=f"to-polaroid-{options.size}-")
 
     return options
 
@@ -125,7 +145,7 @@ def build_target(filepath, folder):
     return a new folder path
     """
     name, _ = path.splitext(path.basename(filepath))
-    return path.join(path.dirname(path.realpath(__file__)), folder, name + ".jpg")
+    return path.join(folder, name + ".jpg")
 
 
 def can_create_polaroid(image, measures):
@@ -166,11 +186,12 @@ def create_polaroid(image, measures):
 
 def save_to(image, original_filepath, folder):
     target_hd = build_target(original_filepath, folder)
+    logger.info(target_hd)
     image.save(target_hd)
     return target_hd
 
 
-def convert_picture(filepath):
+def convert_picture(filepath, options):
     source_image = Image.open(filepath)
     # other proportion
     # hd_measures = SimpleNamespace(
@@ -190,8 +211,8 @@ def convert_picture(filepath):
     )
     if can_create_polaroid(source_image, hd_measures):
         hd_image = create_polaroid(source_image, hd_measures)
-        hd_path = save_to(hd_image, filepath, "polaroid-hd")
-        logger.info("saved HD to %s", hd_path)
+        hd_path = save_to(hd_image, filepath, options.to_folder)
+        logger.info("saved to %s", hd_path)
     else:
         logger.warning(
             "%s : %s is too small to have a polaroid of : %s",
@@ -200,23 +221,8 @@ def convert_picture(filepath):
             hd_measures,
         )
 
-    if can_create_polaroid(source_image, mini_measures):
-        mini_image = create_polaroid(source_image, mini_measures)
-        mini_path = save_to(mini_image, filepath, "polaroid-mini")
-        logger.info("saved mini to %s", mini_path)
-    else:
-        logger.warning(
-            "%s : %s is too small to have a polaroid of : %s",
-            filepath,
-            source_image.size,
-            mini_measures,
-        )
-
 
 def main(args):
-    """
-    main
-    """
     options = parse(args)
     options = prepare_files(options)
 
@@ -224,7 +230,7 @@ def main(args):
 
     for filepath in options.files:
         logger.info("Try to convert %s", filepath)
-        convert_picture(filepath)
+        convert_picture(filepath, options)
 
 
 if __name__ == "__main__":
