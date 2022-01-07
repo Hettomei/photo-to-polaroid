@@ -36,10 +36,25 @@ def parse(sys_args):
         dest="filepath",
         action="store",
         help="File path to convert",
-        required=True,
+    )
+
+    parser.add_argument(
+        "--folder",
+        dest="folder",
+        action="store",
+        help="Folder path to convert all jpg jpeg and png",
     )
 
     return parser.parse_args(sys_args)
+
+
+def prepare_files(options):
+    options.files = []
+
+    if options.filepath:
+        options.files.append(options.filepath)
+
+    return options
 
 
 def crop_center(image, measures):
@@ -145,14 +160,8 @@ def save_to(image, original_filepath, folder):
     return target_hd
 
 
-def main(args):
-    """
-    main
-    """
-    options = parse(args)
-    source_image = Image.open(options.filepath)
-    logger.info("Try to convert %s to polaroid", options.filepath)
-
+def convert_picture(filepath):
+    source_image = Image.open(filepath)
     # other proportion
     # hd_measures = SimpleNamespace(
     #     width=760,
@@ -171,27 +180,41 @@ def main(args):
     )
     if can_create_polaroid(source_image, hd_measures):
         hd_image = create_polaroid(source_image, hd_measures)
-        hd_path = save_to(hd_image, options.filepath, "polaroid-hd")
+        hd_path = save_to(hd_image, filepath, "polaroid-hd")
         logger.info("saved HD to %s", hd_path)
     else:
         logger.warning(
             "%s : %s is too small to have a polaroid of : %s",
-            options.filepath,
+            filepath,
             source_image.size,
             hd_measures,
         )
 
     if can_create_polaroid(source_image, mini_measures):
         mini_image = create_polaroid(source_image, mini_measures)
-        mini_path = save_to(mini_image, options.filepath, "polaroid-mini")
+        mini_path = save_to(mini_image, filepath, "polaroid-mini")
         logger.info("saved mini to %s", mini_path)
     else:
         logger.warning(
             "%s : %s is too small to have a polaroid of : %s",
-            options.filepath,
+            filepath,
             source_image.size,
             mini_measures,
         )
+
+
+def main(args):
+    """
+    main
+    """
+    options = parse(args)
+    options = prepare_files(options)
+
+    logger.info(options)
+
+    for filepath in options.files:
+        logger.info("Try to convert %s to polaroid", filepath)
+        convert_picture(filepath)
 
 
 if __name__ == "__main__":
