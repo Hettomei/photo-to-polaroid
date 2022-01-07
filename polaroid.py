@@ -7,6 +7,7 @@ import argparse
 import sys
 import logging
 from os import path
+from pathlib import Path
 from types import SimpleNamespace
 
 from PIL import Image, ImageDraw
@@ -49,10 +50,19 @@ def parse(sys_args):
 
 
 def prepare_files(options):
-    options.files = []
+    options.files = set()
 
     if options.filepath:
-        options.files.append(options.filepath)
+        options.files.add(Path(options.filepath).resolve())
+
+    if options.folder:
+        options.files.update(
+            (
+                p.resolve()
+                for p in Path(options.folder).glob("*")
+                if p.suffix.lower() in {".jpg", ".jpeg", ".png", ".webp", ".gif"}
+            )
+        )
 
     return options
 
@@ -213,7 +223,7 @@ def main(args):
     logger.info(options)
 
     for filepath in options.files:
-        logger.info("Try to convert %s to polaroid", filepath)
+        logger.info("Try to convert %s", filepath)
         convert_picture(filepath)
 
 
