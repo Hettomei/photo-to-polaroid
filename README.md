@@ -1,6 +1,6 @@
-convertit des photos en polaroid
+Convertit des photos en polaroid
 
-install python 3.9
+require python >= 3.9
 
 ```
 pip install -r requirement.
