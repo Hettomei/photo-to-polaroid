@@ -18,6 +18,24 @@ BORDER_SIZE = 1
 BORDER_COLOR = (100, 100, 100)
 COLOR_FRAME = (255, 255, 255)
 
+MEASURES = {
+    "medium-lightframe": SimpleNamespace(
+        width=760,
+        height=1000,
+        frame=SimpleNamespace(top=100, bottom=200, left=70, right=70),
+    ),
+    "medium": SimpleNamespace(
+        width=760,
+        height=1000,
+        frame=SimpleNamespace(top=140, bottom=280, left=70, right=70),
+    ),
+    "mini": SimpleNamespace(
+        width=380,
+        height=500,
+        frame=SimpleNamespace(top=70, bottom=140, left=35, right=35),
+    ),
+}
+
 logger = logging.getLogger()
 
 
@@ -51,7 +69,7 @@ def parse(sys_args):
     parser.add_argument(
         "--size",
         dest="size",
-        choices=["mini", "medium"],
+        choices=sorted(MEASURES.keys()),
         action="store",
         help="the size of the polaroid",
         default="medium",
@@ -61,13 +79,17 @@ def parse(sys_args):
         "--to",
         dest="to_folder",
         action="store",
-        help="The destination folder. passing a/b/c will create ./a/b/c if does not exist. By default create a temp folder",
+        help=(
+            "The destination folder. "
+            "passing a/b/c will create ./a/b/c if it does not exist. "
+            "By default create a temp folder"
+        ),
     )
 
     return parser.parse_args(sys_args)
 
 
-def prepare_files(options):
+def prepare_env(options):
     options.files = set()
 
     if options.filepath:
@@ -86,6 +108,8 @@ def prepare_files(options):
         os.makedirs(options.to_folder)
     else:
         options.to_folder = tempfile.mkdtemp(prefix=f"to-polaroid-{options.size}-")
+
+    options.measures = MEASURES[options.size]
 
     return options
 
@@ -196,37 +220,23 @@ def save_to(image, original_filepath, folder):
 
 def convert_picture(filepath, options):
     source_image = Image.open(filepath)
-    # other proportion
-    # hd_measures = SimpleNamespace(
-    #     width=760,
-    #     height=1000,
-    #     # frame=SimpleNamespace(top=100, bottom=200, left=70, right=70),
-    # )
-    hd_measures = SimpleNamespace(
-        width=760,
-        height=1000,
-        frame=SimpleNamespace(top=140, bottom=280, left=70, right=70),
-    )
-    mini_measures = SimpleNamespace(
-        width=380,
-        height=500,
-        frame=SimpleNamespace(top=70, bottom=140, left=35, right=35),
-    )
-    if can_create_polaroid(source_image, hd_measures):
-        hd_image = create_polaroid(source_image, hd_measures)
+    measures = options.measures
+
+    if can_create_polaroid(source_image, measures):
+        hd_image = create_polaroid(source_image, measures)
         save_to(hd_image, filepath, options.to_folder)
     else:
         logger.warning(
             "%s : %s is too small to have a polaroid of : %s",
             filepath,
             source_image.size,
-            (hd_measures.width, hd_measures.height),
+            (measures.width, measures.height),
         )
 
 
 def main(args):
     options = parse(args)
-    options = prepare_files(options)
+    options = prepare_env(options)
 
     for filepath in options.files:
         logger.info("Try to convert %s", filepath)
