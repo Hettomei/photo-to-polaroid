@@ -1,6 +1,5 @@
 """
 convert to polaroid
-Thanks to https://raw.githubusercontent.com/thegaragelab/pythonutils/master/polaroid/polaroid.py
 """
 
 import argparse
@@ -18,23 +17,20 @@ BORDER_SIZE = 1
 BORDER_COLOR = (100, 100, 100)
 COLOR_FRAME = (255, 255, 255)
 
-MEASURES = {
-    "medium-lightframe": SimpleNamespace(
-        width=760,
-        height=1000,
-        frame=SimpleNamespace(top=100, bottom=200, left=70, right=70),
-    ),
-    "medium": SimpleNamespace(
-        width=760,
-        height=1000,
-        frame=SimpleNamespace(top=140, bottom=280, left=70, right=70),
-    ),
-    "mini": SimpleNamespace(
-        width=380,
-        height=500,
-        frame=SimpleNamespace(top=70, bottom=140, left=35, right=35),
-    ),
-}
+MEASURE = SimpleNamespace(
+    width=380,
+    height=500,
+    frame=SimpleNamespace(top=70, bottom=140, left=35, right=35),
+)
+
+# ratio  =  width / heigth
+# width  = heigth * ratio
+# heigth =  width / ratio
+RATIO = MEASURE.width / MEASURE.height  # ratio of the inner picture of a polaroid
+RATIO_LEFT_FRAME = MEASURE.width / MEASURE.frame.left
+RATIO_RIGHT_FRAME = MEASURE.width / MEASURE.frame.right
+RATIO_TOP_FRAME = MEASURE.width / MEASURE.frame.top
+RATIO_BOTTOM_FRAME = MEASURE.width / MEASURE.frame.bottom
 
 logger = logging.getLogger()
 
@@ -67,12 +63,13 @@ def parse(sys_args):
     )
 
     parser.add_argument(
-        "--size",
-        dest="size",
-        choices=sorted(MEASURES.keys()),
+        "--final-width",
+        dest="target_width",
         action="store",
-        help="the size of the polaroid",
-        default="medium",
+        help=(
+            "The width of the inner polaroid in pixel. "
+            "Other values are computed. If no values : do not resize it."
+        ),
     )
 
     parser.add_argument(
@@ -107,43 +104,47 @@ def prepare_env(options):
     if options.to_folder:
         os.makedirs(options.to_folder)
     else:
-        options.to_folder = tempfile.mkdtemp(prefix=f"to-polaroid-{options.size}-")
-
-    options.measures = MEASURES[options.size]
+        options.to_folder = tempfile.mkdtemp(prefix="to-polaroid-")
 
     return options
 
 
-def crop_center(image, measures):
+def crop_center(image):
     """
     crop at the center
     return a new Image instance
     """
     width, height = image.size
-    if width == measures.width:
-        delta = (height - measures.height) / 2
-        box = (0, delta, width, height - delta)
+    if width > height:
+        new_width = RATIO * height
+        delta = round((width - new_width) / 2)
+        box = (delta, 0, new_width + delta, height)
     else:
-        delta = (width - measures.width) / 2
-        box = (delta, 0, width - delta, height)
+        new_height = width / RATIO
+        delta = round((height - new_height) / 2)
+        box = (0, delta, width, new_height + delta)
 
     return image.crop(box)
 
 
-def add_frame(image, measures):
+def add_frame(image):
     """Adds the polaroid frame around the image"""
+    width, height = image.size
+    left_frame_size = round(width / RATIO_LEFT_FRAME)
+    top_frame_size = round(width / RATIO_TOP_FRAME)
+
     frame = Image.new(
         "RGB",
         (
             BORDER_SIZE
-            + measures.frame.left
-            + measures.width
-            + measures.frame.right
+            + left_frame_size
+            + width
+            + round(width / RATIO_RIGHT_FRAME)
             + BORDER_SIZE,
             BORDER_SIZE
-            + measures.frame.top
-            + measures.height
-            + measures.frame.bottom
+            + top_frame_size
+            + height
+            + round(width / RATIO_BOTTOM_FRAME)
             + BORDER_SIZE,
         ),
         BORDER_COLOR,
@@ -162,7 +163,7 @@ def add_frame(image, measures):
     )
 
     # Add the source image
-    frame.paste(image, (measures.frame.left, measures.frame.top))
+    frame.paste(image, (left_frame_size, top_frame_size))
 
     return frame
 
@@ -175,63 +176,33 @@ def build_target(filepath, folder):
     return path.join(folder, name + ".jpg")
 
 
-def can_create_polaroid(image, measures):
-    width, height = image.size
-    return width >= measures.width and height > measures.height
-
-
-def rescale_keep_one_side(image, measures):
-    """
-    rescale but force one side.
-    if in landscape -> keep height
-    if in portrait  -> keep width
-    """
-    width, height = image.size
-
-    if width > height:
-        resized_height = measures.height
-        resized_width = int(round((measures.height / float(height)) * width))
-    else:
-        resized_width = measures.width
-        resized_height = int(round((measures.width / float(width)) * height))
-
-    return image.resize(
-        (resized_width, resized_height), resample=Image.LANCZOS, reducing_gap=3
+def create_polaroid(image):
+    croped_image = crop_center(image)
+    frammed_image = add_frame(croped_image)
+    logger.debug(
+        "  image size is %s, ratio is %s", image.size, image.size[0] / image.size[1]
     )
-
-
-def create_polaroid(image, measures):
-    scaled_image = rescale_keep_one_side(image, measures)
-    croped_image = crop_center(scaled_image, measures)
-    frammed_image = add_frame(croped_image, measures)
-    logger.debug("use %s", measures)
-    logger.debug("  image size is %s", image.size)
-    logger.debug(" scaled size is %s", scaled_image.size)
-    logger.debug("cropped size is %s", croped_image.size)
+    logger.debug(
+        "cropped size is %s, ratio is %s",
+        croped_image.size,
+        croped_image.size[0] / croped_image.size[1],
+    )
     return frammed_image
 
 
 def save_to(image, original_filepath, folder):
     target = build_target(original_filepath, folder)
     image.save(target)
-    logger.info("saved to %s", target)
     return target
 
 
 def convert_picture(filepath, options):
     source_image = Image.open(filepath)
-    measures = options.measures
 
-    if can_create_polaroid(source_image, measures):
-        hd_image = create_polaroid(source_image, measures)
-        save_to(hd_image, filepath, options.to_folder)
-    else:
-        logger.warning(
-            "%s : %s is too small to have a polaroid of : %s",
-            filepath,
-            source_image.size,
-            (measures.width, measures.height),
-        )
+    hd_image = create_polaroid(source_image)
+    savepath = save_to(hd_image, filepath, options.to_folder)
+
+    logger.info("%s saved to %s", filepath, savepath)
 
 
 def main(args):
@@ -239,7 +210,6 @@ def main(args):
     options = prepare_env(options)
 
     for filepath in options.files:
-        logger.info("Try to convert %s", filepath)
         convert_picture(filepath, options)
 
 
