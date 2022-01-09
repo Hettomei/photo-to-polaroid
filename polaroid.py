@@ -38,7 +38,7 @@ logger = logging.getLogger()
 def setup_logger():
     formatter = logging.Formatter("%(asctime)s %(levelname)-8s %(message)s")
 
-    console = logging.StreamHandler()
+    console = logging.StreamHandler(sys.stdout)
     console.setLevel(logging.INFO)
     console.setFormatter(formatter)
 
@@ -64,7 +64,7 @@ def parse(sys_args):
 
     parser.add_argument(
         "--final-width",
-        dest="target_width",
+        dest="final_width",
         action="store",
         help=(
             "The width of the inner polaroid in pixel. "
@@ -106,6 +106,9 @@ def prepare_env(options):
     else:
         options.to_folder = tempfile.mkdtemp(prefix="to-polaroid-")
 
+    if options.final_width:
+        options.final_width = int(options.final_width)
+
     return options
 
 
@@ -114,37 +117,35 @@ def crop_center(image):
     crop at the center
     return a new Image instance
     """
-    width, height = image.size
-    if width > height:
-        new_width = RATIO * height
-        delta = round((width - new_width) / 2)
-        box = (delta, 0, new_width + delta, height)
+    if image.width > image.height:
+        new_width = RATIO * image.height
+        delta = round((image.width - new_width) / 2)
+        box = (delta, 0, new_width + delta, image.height)
     else:
-        new_height = width / RATIO
-        delta = round((height - new_height) / 2)
-        box = (0, delta, width, new_height + delta)
+        new_height = image.width / RATIO
+        delta = round((image.height - new_height) / 2)
+        box = (0, delta, image.width, new_height + delta)
 
     return image.crop(box)
 
 
 def add_frame(image):
     """Adds the polaroid frame around the image"""
-    width, height = image.size
-    left_frame_size = round(width / RATIO_LEFT_FRAME)
-    top_frame_size = round(width / RATIO_TOP_FRAME)
+    left_frame_size = round(image.width / RATIO_LEFT_FRAME)
+    top_frame_size = round(image.width / RATIO_TOP_FRAME)
 
     frame = Image.new(
         "RGB",
         (
             BORDER_SIZE
             + left_frame_size
-            + width
-            + round(width / RATIO_RIGHT_FRAME)
+            + image.width
+            + round(image.width / RATIO_RIGHT_FRAME)
             + BORDER_SIZE,
             BORDER_SIZE
             + top_frame_size
-            + height
-            + round(width / RATIO_BOTTOM_FRAME)
+            + image.height
+            + round(image.width / RATIO_BOTTOM_FRAME)
             + BORDER_SIZE,
         ),
         BORDER_COLOR,
@@ -156,8 +157,8 @@ def add_frame(image):
         (
             BORDER_SIZE,
             BORDER_SIZE,
-            frame.size[0] - BORDER_SIZE * 2,
-            frame.size[1] - BORDER_SIZE * 2,
+            frame.width - BORDER_SIZE * 2,
+            frame.height - BORDER_SIZE * 2,
         ),
         fill=COLOR_FRAME,
     )
@@ -176,31 +177,43 @@ def build_target(filepath, folder):
     return path.join(folder, name + ".jpg")
 
 
-def create_polaroid(image):
-    croped_image = crop_center(image)
-    frammed_image = add_frame(croped_image)
-    logger.debug(
-        "  image size is %s, ratio is %s", image.size, image.size[0] / image.size[1]
-    )
-    logger.debug(
-        "cropped size is %s, ratio is %s",
-        croped_image.size,
-        croped_image.size[0] / croped_image.size[1],
-    )
-    return frammed_image
-
-
 def save_to(image, original_filepath, folder):
     target = build_target(original_filepath, folder)
     image.save(target)
     return target
 
 
-def convert_picture(filepath, options):
+def create_polaroid(filepath, options):
     source_image = Image.open(filepath)
+    logger.debug(
+        "  image size is %s, ratio is %s",
+        source_image.size,
+        source_image.width / source_image.height,
+    )
 
-    hd_image = create_polaroid(source_image)
-    savepath = save_to(hd_image, filepath, options.to_folder)
+    croped_image = crop_center(source_image)
+
+    resized_image = croped_image
+    if options.final_width:
+        resized_image = croped_image.resize(
+            (options.final_width, round(options.final_width / RATIO)),
+            resample=Image.LANCZOS,
+            reducing_gap=3,
+        )
+        logger.debug(
+            "  thumb size is %s, ratio is %s",
+            resized_image.size,
+            resized_image.width / resized_image.height,
+        )
+
+    frammed_image = add_frame(resized_image)
+    logger.debug(
+        "frammed size is %s, ratio is %s",
+        frammed_image.size,
+        frammed_image.width / frammed_image.height,
+    )
+
+    savepath = save_to(frammed_image, filepath, options.to_folder)
 
     logger.info("%s saved to %s", filepath, savepath)
 
@@ -210,7 +223,7 @@ def main(args):
     options = prepare_env(options)
 
     for filepath in options.files:
-        convert_picture(filepath, options)
+        create_polaroid(filepath, options)
 
 
 if __name__ == "__main__":

@@ -7,5 +7,7 @@ pip install -r requirement.
 
 python polaroid.py --help
 
+python polaroid.py --help
+
 python polaroid.py --from examples/
 ```
