@@ -32,7 +32,7 @@ RATIO_RIGHT_FRAME = MEASURE.width / MEASURE.frame.right
 RATIO_TOP_FRAME = MEASURE.width / MEASURE.frame.top
 RATIO_BOTTOM_FRAME = MEASURE.width / MEASURE.frame.bottom
 
-logger = logging.getLogger()
+logger = logging.getLogger("polaroid")
 
 
 def setup_logger():
@@ -204,6 +204,7 @@ def create_polaroid(filepath, options):
         croped_image = pad_center(source_image)
     else:
         croped_image = crop_center(source_image)
+    log_size(" croped size is %s, ratio is %s", croped_image)
 
     if options.final_width:
         resized_image = croped_image.resize(
