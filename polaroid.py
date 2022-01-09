@@ -11,7 +11,7 @@ from pathlib import Path
 from types import SimpleNamespace
 import tempfile
 
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageOps
 
 BORDER_SIZE = 1
 BORDER_COLOR = (100, 100, 100)
@@ -83,6 +83,13 @@ def parse(sys_args):
         ),
     )
 
+    parser.add_argument(
+        "--no-crop",
+        dest="no_crop",
+        action="store_true",
+        help="never cut the picture before adding a polaroid frame",
+    )
+
     return parser.parse_args(sys_args)
 
 
@@ -118,15 +125,28 @@ def crop_center(image):
     return a new Image instance
     """
     if image.width > image.height:
-        new_width = RATIO * image.height
-        delta = round((image.width - new_width) / 2)
-        box = (delta, 0, new_width + delta, image.height)
+        new_width = round(RATIO * image.height)
+        new_height = image.height
     else:
-        new_height = image.width / RATIO
-        delta = round((image.height - new_height) / 2)
-        box = (0, delta, image.width, new_height + delta)
+        new_height = round(image.width / RATIO)
+        new_width = image.width
 
-    return image.crop(box)
+    return ImageOps.fit(image, (new_width, new_height))
+
+
+def pad_center(image):
+    """
+    pad at the center
+    return a new Image instance
+    """
+    if image.width > image.height:
+        new_width = round(RATIO * image.height)
+        new_height = image.height
+    else:
+        new_height = round(image.width / RATIO)
+        new_width = image.width
+
+    return ImageOps.pad(image, (new_width, new_height))
 
 
 def add_frame(image):
@@ -169,58 +189,48 @@ def add_frame(image):
     return frame
 
 
-def build_target(filepath, folder):
-    """
-    return a new folder path
-    """
+def save_to(image, filepath, folder, more=""):
     name, _ = path.splitext(path.basename(filepath))
-    return path.join(folder, name + ".jpg")
-
-
-def save_to(image, original_filepath, folder):
-    target = build_target(original_filepath, folder)
+    target = path.join(folder, name + more + ".jpg")
     image.save(target)
     return target
 
 
 def create_polaroid(filepath, options):
     source_image = Image.open(filepath)
-    logger.debug(
-        "  image size is %s, ratio is %s",
-        source_image.size,
-        source_image.width / source_image.height,
-    )
+    log_size("  image size is %s, ratio is %s", source_image)
 
-    croped_image = crop_center(source_image)
+    if options.no_crop:
+        croped_image = pad_center(source_image)
+    else:
+        croped_image = crop_center(source_image)
 
-    resized_image = croped_image
     if options.final_width:
         resized_image = croped_image.resize(
             (options.final_width, round(options.final_width / RATIO)),
             resample=Image.LANCZOS,
             reducing_gap=3,
         )
-        logger.debug(
-            "  thumb size is %s, ratio is %s",
-            resized_image.size,
-            resized_image.width / resized_image.height,
-        )
+        log_size("  thumb size is %s, ratio is %s", resized_image)
+    else:
+        resized_image = croped_image
 
     frammed_image = add_frame(resized_image)
-    logger.debug(
-        "frammed size is %s, ratio is %s",
-        frammed_image.size,
-        frammed_image.width / frammed_image.height,
-    )
+    log_size("frammed size is %s, ratio is %s", frammed_image)
 
     savepath = save_to(frammed_image, filepath, options.to_folder)
 
     logger.info("%s saved to %s", filepath, savepath)
 
 
+def log_size(txt, image):
+    logger.debug(txt, image.size, image.width / image.height)
+
+
 def main(args):
     options = parse(args)
     options = prepare_env(options)
+    logger.debug(options)
 
     for filepath in options.files:
         create_polaroid(filepath, options)
