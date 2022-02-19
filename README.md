@@ -14,7 +14,7 @@ python polaroid.py --help
 # Demo
 
 ```
-python polaroid.py --from examples --to examples-after
+python polaroid.py --from examples --to examples-after --final-width 400
 ```
 
 ![demo1-pola](examples-after/pexels-alexis-ricardo-alaurin-10103566-portrait.jpg)
@@ -23,7 +23,7 @@ python polaroid.py --from examples --to examples-after
 
 
 ```
-python polaroid.py --from examples --to examples-after-no-crop --no-crop
+python polaroid.py --from examples --to examples-after-no-crop --final-width 400 --no-crop
 ```
 
 ![demo1-pola-no-crop](examples-after-no-crop/pexels-alexis-ricardo-alaurin-10103566-portrait.jpg)
